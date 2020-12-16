@@ -1,0 +1,414 @@
+\documentclass[12pt, letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true, %set true if you want colored links
+    linktoc=all,     %set to all if you want both sections and subsections linked
+    linkcolor=black,  %choose some color if you want links to stand out
+}
+\usepackage{graphicx}
+\graphicspath{{./images/}}
+
+\usepackage[none]{hyphenat}
+
+\tolerance=1
+\emergencystretch=\maxdimen
+\hyphenpenalty=10000
+\hbadness=10000
+
+\title{Sistema Gestione ZTL}
+\author{Riccardo Maria Pesce}
+\date{Anno Accademico 2019-2020}
+
+\renewcommand{\contentsname}{Contenuti}
+
+\begin{document}
+
+\begin{titlepage}
+
+\maketitle
+
+\begin{abstract}
+
+\noindent
+Lo scopo del presente documento di ideazione è descrivere dettagliatamente la fase di ideazione del software di gestione delle zone a traffico limitato, \emph{Sistema Gestione ZTL}, sottolineando in modo particolare le implicazioni di tale sistema, le sue caratteristiche salienti, la relativa analisi di fattibilità e gli attori coinvolti, ossia le entità che interagiranno con esso.
+\noindent
+Tale stesura verrà suddivisa in sezioni per una migliore comprensione semantica.
+
+\end{abstract}
+\end{titlepage}
+
+\tableofcontents{}
+
+\pagebreak
+
+\section{Analisi dei requisiti}
+
+\subsection{Introduzione}
+Nella presente sezione verranno discussi i requisiti e le funzionalità peculiare del software, con particolare enfasi agli attori del sistema e le loro interazioni con esso.
+
+\subsection{Requisiti}
+Un comune richiede la realizzazione di un sistema di gestione degli accessi alla zona a traffico limitato (ZTL). I terminali che eseguiranno tale funzione verranno posti in prossimità dei varchi d'accesso alla ZTL, e verranno installati e gestiti dai tecnici comunali.
+In particolare:
+
+\begin{itemize}
+    \item L'impiegato deve poter registrare un nuovo terminale, munito di codice univoco, al sistema centrale il quale a sua volta assegnerà al nuovo dispositivo un profilo a seconda dei valichi e intervalli consentiti.
+    
+    I profili che possono essere assegnati ad un terminale sono due: 
+    \begin{itemize}
+        \item Il profilo abilitato a gestire i residenti, i quali godono di accessi da tutti i valichi ed intervalli illimitati.
+        \item Il profilo abilitato a gestire gli utenti carico-scarico, ossia gli utenti abilitati all'accesso da un solo varco in uno o due intervalli di tempo, della durata di massimo un'ora.
+    \end{itemize}
+    Ogni terminale deve riconoscere tali tipologie di utente per comportarsi adeguatamente.
+    \item L'impiegato deve poter gestire (aggiungere, rimuovere, modificare) la lista di utenti residenti in modo tale che essi possano essere gestiti correttamente dai terminali. Tale lista sarà salvata in memoria persistente a fine giornata e caricata dal sistema centrale all'inizio del nuovo giorno.
+    \item L'utente deve poter essere identificato all'ingresso. A tal proposito, il sistema deve registrare gli ingressi alla ZTL. In particolare:
+    \begin{itemize}
+        \item Se l'utente è residente, il sistema, dopo aver acquisito il codice identificativo, conferma l'ingresso ritornando quest'ultimo e lascia passare il veicolo.
+        \item Se l'utente è un utente Carico-Scarico, il sistema:
+        \begin{enumerate}
+            \item Dovrà controllare che il valico dalla quale si sta entrando sia consentito al transito di tale tipologia di utenti.
+            \item Dovrà controllare che l'utente non abbia gia usufruito dei due intervalli di tempo consentiti.
+        \end{enumerate}
+        Solo in caso positivo, il sistema ritrasmetterà il codice di identificazione come conferma del transito.
+        In caso negativo, verrà ritrasmesso -1 e verrà notificata l'infrazione commessa.
+    \end{itemize}
+    \item Gli utenti devono essere identificati all'uscita della ZTL. Pertanto, il sistema deve registrare anche le uscite dalla ZTL. In particolare:
+    \begin{itemize}
+        \item Se l'utente è residente, il sistema, dopo aver acquisito il codice identificativo, lascia uscire il veicolo.
+        \item Se l'utente è un utente Carico-Scarico, il sistema controlla che il transito nella ZTL sia avvenuto regolarmente, nell'intervallo consentito e per la durata consentita (di un'ora). Solo in caso affermativo, verrà ritrasmesso il codice identificativo alla macchina come conferma. In caso negativo, viene registrata la targa e l'infrazione (intervallo non autorizzato o eccesso di permanenza). 
+    \end{itemize}    
+    \item Il sistema deve sanzionare l'utente all'uscita solo nel caso in cui lo stesso non abbia sanzioni ricevute all'ingresso, in quanto quest'ultime hanno maggior valenza. In ogni caso, le sanzioni all'ingresso della ZTL vengono accumulate.
+    \item L'impiegato, a termine della giornata, deve avere accesso alle irregolarità commesse, che saranno registrate su memoria persistente dal sistema stesso.
+\end{itemize}
+
+\section{Modello dei casi d'uso}
+
+\subsection{Introduzione}
+Avendo definito i requisiti che il sistema deve soddisfare ed avendo individuato gli attori principali, definiremo i casi d'uso principali.
+In seguito, daremo una trattazione dettagliata di alcuni di essi.
+
+\subsection{Casi d'uso}
+
+\begin{itemize}
+    \item \textbf{UC1:} Registra Ingresso
+    \begin{itemize}
+        \item \textbf{Attore:} Utente
+        \item \textbf{Descrizione:} Registrazione 
+        dell'ingresso dell'utente (residente o 
+        carico-scarico) alla zona a traffico 
+        limitato, attraverso il codice identificativo 
+        associato al veicolo
+    \end{itemize}
+    
+    \item \textbf{UC2:} Registra Uscita
+    \begin{itemize}
+        \item \textbf{Attore:} Utente
+        \item \textbf{Descrizione:} Registrazione 
+        dell'uscita dell'utente alla zona a 
+        traffico limitato attraverso il codice 
+        identificativo associato al veicolo
+    \end{itemize}
+
+    \item \textbf{UC3:} Gestisci Terminale (CRUD)
+    \begin{itemize}
+        \item \textbf{Attore:} Impiegato
+        \item \textbf{Descrizione:} Inserire e 
+        cancellare i terminali ai varchi della 
+        zona a traffico limitato
+    \end{itemize}
+
+    \item \textbf{UC4:} Gestisci Residente (CRUD)
+    \begin{itemize}
+        \item \textbf{Attore:} Impiegato
+        \item \textbf{Descrizione:} Inserire e 
+        cancellare utenti residenti
+    \end{itemize}
+
+    \item \textbf{UC5:} Sanziona Utente
+    \begin{itemize}
+        \item \textbf{Attore:} Utente
+        \item \textbf{Descrizione:} Sanziona,
+        in caso di infrazione, l'utente che sta 
+        eseguendo un transito irregolare
+    \end{itemize}
+\end{itemize}
+
+
+\subsection{Caso d'uso UC1 - Registra Ingresso}
+
+\begin{itemize}
+\item \textbf{UC1:} Registra Ingresso
+\item \textbf{Portata:} Sistema Gestion ZTL
+\item \textbf{Livello:} Obiettivo utente
+\item \textbf{Pre-condizioni:} Nessuna
+\item \textbf{Garanzie di successo (Post-condizioni):} L'utente identificato entra nella ZTL
+
+\item \textbf{Scenario principale di successo}
+\begin{itemize}
+    \item L'utente, avvicinatosi al varco, innesta il sistema attraverso l'invio, da parte del telepass, di un codice identificativo
+    \item Se l'utente è residente, il telepass lo lascia passare senza ulteriori azioni
+    \item Se l'utente non è residente, il terminale è abilitato all'ingresso di utenti carico-scarico e l'utente non ha gia usufruito dei suoi due intervalli consentiti, il sistema registra l'orario d'ingresso e ritorna alla vettura il codice identificativo come conferma, e lo lascia passare
+\end{itemize}
+
+\item \textbf{Scenari alternativi}
+\begin{itemize}
+    \item \textbf{Il varco non è abilitato all'accesso degli utenti carico-scarico}
+    \begin{enumerate}
+        \item Attraverso un'apposita telecamera viene registrata la targa dell'utente. 
+        \item Viene registrata una multa di tipo \emph{ingresso irregolare}.
+    \end{enumerate}
+    \item \textbf{Il transito sta avvenendo in un intervallo non consentito}
+    \begin{enumerate}
+        \item Attraverso un'apposita telecamera viene registrata la targa dell'utente. 
+        \item Viene registrata una multa di tipo \emph{intervallo non consentito}.   
+    \end{enumerate}
+    \item \textbf{L'utente non possiede alcun dispositivo telepass}
+    \begin{enumerate}
+        \item Attraverso un'apposita telecamera viene registrata la targa dell'utente. 
+        \item Viene registrata una multa di tipo \emph{transito non consentito}.   
+    \end{enumerate}
+\end{itemize}
+
+\item \textbf{Requisiti speciali:} Bassa latenza
+\item \textbf{Frequenza:} Ogni qualvolta un utente si presenta al varco
+\end{itemize}
+
+\subsection{Caso d'uso UC2 - Registra Uscita}
+\begin{itemize}
+\item \textbf{UC2:} Registra Uscita
+\item \textbf{Portata:} Sistema Gestion ZTL
+\item \textbf{Livello:} Obiettivo utente
+\item \textbf{Pre-condizioni:} L'utente si trova all'interno della zona a traffico limitato
+\item \textbf{Garanzie di successo (Post-condizioni):} L'utente esce dalla zona a traffico limitato
+\item \textbf{Scenario principale di successo}
+\begin{itemize}
+    \item L'utente, avvicinatosi al varco d'uscita, attiva il sistema attraverso l'invio, da parte del telepass, di un codice identificativo.
+    \item Se l'utente è residente, il telepass lo lascia uscire senza ulteriori azioni.
+    \item Se l'utente è carico-scarico, il varco di uscita è quello abilitato a tali utenti e non ha sostato per più di un'ora, il sistema registra lo rimuove semplicemnte da una determinata lista di utenti carico-scarico all'interno della ZTL e ritorna alla vettura il codice identificativo come conferma, e lo lascia passare.
+\end{itemize}    
+\item \textbf{Scenari alternativi}
+\begin{itemize}
+    \item \textbf{L'utente è rimasto per più del tempo consentito}
+    \begin{enumerate}
+        \item Attraverso un'apposita telecamera viene registrata la targa dell'utente
+        \item Viene registrata una multa di tipo \emph{sosta in eccesso}
+    \end{enumerate}
+\end{itemize}
+
+\item \textbf{Requisiti speciali:} Bassa latenza
+\item \textbf{Frequenza:} Ogni qualvolta un utente si presenta al varco d'uscita 
+\end{itemize}
+
+\subsection{Caso d'uso UC3 - Gestisci Terminale}
+
+\emph{Attore primario: } Impiegato
+
+\begin{itemize}
+    \item \emph{Scenari principali di successo}
+    \begin{itemize}
+        \item \textbf{Aggiungi Terminale}
+        \begin{enumerate}
+            \item L'impiegato immette il codice identificativo del terminale da aggiungere.
+            \item Il sistema, assicuratosi che tale codice non appartenga ad altro terminale installato, richiede all'impiegato il profilo da associare al nuovo terminale.
+            \item Si possono verificare le seguenti opzioni:
+            \begin{itemize}
+                \item Il profilo richiesto è \emph{carico-scarico}. In questo caso, se non esiste un terminale con tale profilo, la richiesta viene accettata. Altrimenti, verrà chiesto di modificare il profilo dell'attuale terminale \emph{carico-scarico} prima di procedere. Questo perchè deve essere solo uno il terminale autorizzato al riconoscimento di tale categoria di utenti. Di norma, questo scenario dovrebbe avvenire all'inizio, prima dell'avvio del sistema, in quanto deve essere garantito almeno un terminale con questo profilo
+                \item Il profilo richiesto è \emph{residente}. In tal caso, dato che non esistono limitazioni circa tale categoria, il profilo viene impostato correttamente e nessun'altra azione è richiesta
+            \end{itemize}
+        \end{enumerate}
+    \end{itemize}
+
+    \begin{itemize}
+        \item \textbf{Rimuovi Terminale}
+        \begin{enumerate}
+            \item L'impiegato immette il codice identificativo del terminale da rimuovere.
+            \item Il sistema, assicuratosi che tale esista, compie una delle seguenti azioni.
+            \begin{itemize}
+                \item Se il terminale da rimuovere è di tipo \emph{carico-scarico}, viene chiesto all'impiegato di selezionare un altro terminale per tale funzione.
+                \item Se il terminale da rimuovere ha profilo \emph{residente}, viene rimosso semplicemnte, senza ulteriori azioni.
+            \end{itemize}
+        \end{enumerate}
+    \end{itemize}
+
+    \begin{itemize}
+        \item \textbf{Modifica Terminale}
+        \begin{enumerate}
+            \item L'impiegato immette il codice identificativo del terminale da modificare.
+            \item Il sistema, assicuratosi che tale codice non esista, richiedere all'impiegato il nuovo profilo da associare al terminale.
+            \item Si possono verificare le seguenti opzioni:
+            \begin{itemize}
+                \item Il profilo richiesto è \emph{carico-scarico}, pertanto il sistema chiederà all'impiegato di sostituire il profilo del terminale correntemente atto a tale designazione in profilo \emph{residente}, ed in caso affermativo, il nuovo profilo verrà registrato.
+                \item Il profilo richiesto è \emph{residente}. In tal caso viene richiesto di scegliere un altro terminale per tale funzione prima di convertire il profilo con successo.
+            \end{itemize}
+        \end{enumerate}
+    \end{itemize}
+\end{itemize}
+
+\begin{itemize}
+    \item \emph{Scenari alternativi}
+    \begin{itemize}
+        \item \textbf{Aggiungi Terminale}
+        \begin{itemize}
+            \item Se il numero inserito è gia presente, allora il sistema ritornerà un messaggio d'errore.
+            \item Se, nel caso in cui si sta aggiungendo un terminale \emph{carico-scarico} e quando viene chiesto di cambiare il corrente terminale designato a tale funzione, viene fornita una risposta non affermativa o sbagliata, il sistema ritorna un messaggio d'errore.
+        \end{itemize}
+    \end{itemize}
+
+    \begin{itemize}
+        \item \textbf{Rimuovi Terminale}
+        \begin{itemize}
+            \item Se il codice identificativo non esiste, viene ritornato un messaggio d'errore.
+            \item Se tale è l'unico terminale attivo nel sistema, viene respinta la richiesta con un apposito messaggio d'errore.
+            \item Se, nel caso in cui si vuole rimuovere il terminale \emph{carico-scarico}, ed alla richiesta di inserire il codice di un altro terminale per trasferire tale profilo viene inserito un codice inesistente, viene restituito un messaggio d'errore e terminata l'esecuzione.
+        \end{itemize}
+    \end{itemize}
+
+    \begin{itemize}
+        \item \textbf{Modifica Terminale}
+        \begin{itemize}
+            \item Se il codice identificativo non esiste, viene ritornato un messaggio d'errore.  
+            \item Se, nel caso in cui si vuole modificare il terminale \emph{carico-scarico}, ed alla richiesta di inserire il codice di un altro terminale per trasferire tale profilo viene inserito un codice inesistente, viene restituito un messaggio d'errore e terminata l'esecuzione.  
+            \item Se nel caso in cui si vuole modificare un terminale \emph{residente} in terminale \emph{carico-scarico}, e viene data una risposta non affermativa od un codice non esistente alla richiesta del nuovo terminale alla quale trasferire tale funzionalità, viene lanciato un messaggio d'errore e l'esecuzione termina.
+            \item Viceversa, se nel caso in cui si vuole modificare un terminale \emph{carico-scarico} in terminale \emph{residente}, e viene data una risposta non affermativa od un codice non esistente alla richiesta del nuovo terminale alla quale trasferire la funzionalità \emph{carico-scarico}, viene lanciato un messaggio d'errore e l'esecuzione termina.
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+
+\subsection{Caso d'uso UC4 - Gestisci Residente}
+
+\emph{Attore primario: } Impiegato
+
+\begin{itemize}
+    \item \emph{Scenari principali di successo}
+    \begin{itemize}
+        \item \textbf{Aggiungi Residente}
+        \begin{enumerate}
+            \item L'impiegato immette i dati anagrafici, ed assegna al residente il codice identificativo del dispositivo telepass posseduto dall'utente stesso.
+            \item Il sistema, assicuratosi che l'utente non esiste gia (attraverso il controllo del codice identificativo), lo registrerà con successo.
+        \end{enumerate}
+
+        \item \textbf{Rimuovi Residente}
+        \begin{enumerate}
+            \item L'impiegato immette il codice identificativo dell'utente da rimuovere.
+            \item Il sistema, assicuratosi che l'utente esista, lo rimuove senza ulteriori azioni.
+        \end{enumerate}
+    \end{itemize}
+
+    \item \emph{Scenari alternativi}
+    \begin{itemize}
+        \item \textbf{Aggiungi Residente}
+        \begin{itemize}
+            \item Se l'utente gia esiste, la richiesta verrà semplicemnte ignorata con un messaggio d'errore.
+        \end{itemize}
+
+        \item \textbf{Rimuovi Residente}
+        \begin{itemize}
+            \item Se l'utente non esiste, la richiesta verrà semplicemnte ignorata con un messaggio d'errore.
+        \end{itemize}
+    \end{itemize}
+
+\end{itemize}
+
+
+
+\section{Documento di visione}
+
+\subsection{Introduzione}
+L'obiettivo è realizzare un sistema per la gestione degli ingressi di una zona a traffico limitato (ZTL). Tale sistema, composto da terminali posizionati ad ogni varco, automatizzerà il processo di registrazione degli ingressi, ed il processo di sanzionare le trasgressioni.
+
+\noindent
+Lo scopo di tale documento è quella di definire ed analizzare le esigenze della parte interessata all'utilizzo del sistema software di gestione ZTL.
+
+\noindent
+Il sistema verrà realizzato con tecnologia compatibile con i sistemi dei terminali.
+
+\subsection{Posizionamento}
+
+\begin{itemize}
+    \item \textbf{Opportunità di business}
+    
+    Il sistema sostituirà il personale addetto al controllo degli ingressi e delle uscite dalla ZTL, in modo da automatizzare e velocizzare questo processo, utilizzando un sistema telepass, analogo al sistema telepass gia attivo nelle autostrade. In alcune parti del mondo si utilizza gia un tal sistema. L'obiettivo del nostro sistema è fornire le giuste funzionalità in maniera efficiente e non ingombrante.
+
+    \item \textbf{Formulazione del problema}
+    
+    Il tradizionale sistema per gestire gli accessi nella ZTL prevede la presenza di un vigile urbano che controlla gli ingressi e le uscite tramite pass cartacei. Questo sistema impiega quindi personale che può essere impiegato altrove, oltre ad esporlo a degli evidenti rischi di sicurezza, e di latenza (quando un auto commette un infrazione senza fermarsi ed il vigile deve essere rapido a registrare il veicolo e la targa).
+
+    In tal modo, l'unico attore coinvolto è un impiegato comunale (sia esso vigile o no), che monitora da una telecamera il tutto, lasciando al sistema la totale gestione.
+
+    L'impatto della precedente soluzione inefficiente è appunto il disfunzionale impiego di vigili, la scarsa sicurezza alla quale sono sottoposti e la facilità di errore nel non riuscire a registrare le infrazioni in tempo.
+
+    Il beneficio di un sistema tale è l'automazione del processo e la supervisione di tutti i valichi della ZTL da parte di un solo impiegato.
+    
+    \item \textbf{Formulazione della posizione del prodotto}
+    
+    Il prodotto è rivolto ad un comune che vuole automatizzare la gestione del transito nella propria ZTL.
+
+    L'obiettivo del committente è quindi eseguire le operazioni di registrazione ingressi, uscite e sanzioni in maniera automatica senza l'impiego di personale, ma con la sola supervisione di un impiegato.
+
+    L'applicativo software rientra nella categoria di software personalizzato, in quanto è fatto ad hoc per il comune richiedente, e questo quindi lo rende superiore ad altri applicativi oggi disponibili, ma non altamente personalizzabili.
+
+    Oltre alla grande personalizzazione, è prevista l'implementazione di caratteristiche richieste dal cliente.
+
+\end{itemize}
+
+
+\subsection{Descrizione delle parti interessate}
+\begin{itemize}
+    \item \textbf{Sviluppatore software:} è il principale responsabile dello sviluppo, e si occupa della progettazione dell'implementazione del software. Lo sviluppatore conosce la programmazione e il metodo di sviluppo UP, anche se non hanno approfondite conoscenze del dominio applicativo. Le responsabilità includono l'analisi dei requisiti, la progettazione e l'implementazione del software, ed il testing, oltre che rispondere a richieste o bug fixes. Il criterio di successo è dettato dal basso numero di bugs e dalla soddisfazione delle richieste del cliente e del manager.
+    \item \textbf{Manager del progetto:} è il coordinatore dello sviluppo del sistema in toto, e si occupa della gestione delle risorse fungendo da garante per il progetto stesso.
+    \item \textbf{Utente:} è colui che utilizzerà il sistema, ossia l'impiegato comunale. Egli ricaverà l'elenco delle entrate e uscite, assieme alle sanzioni. L'impiegato dovrebbe possedere discrete conoscenze informatiche inerenti l'utilizzo di shell POSIX (Bash, Zsh). Le sue responsabilità nel progetto includono il comunicare eventuale richieste e richiedere bug fixes. Per garantire il successo, esso dovrà rispondere alle operazioni richieste nel minor tempo. Per tale motivo, l'utente verrà coinvolto attivamente nel progetto stesso.
+\end{itemize}
+
+\subsection{Descrizione generale del prodotto}
+Il software sarà installato sulla workstation centrale e sui terminali. Il sistema centrale conterrà principalmente funzioni di gestioni dei dati ricevuti dai terminali.
+
+I vantaggi derivano appunto dall'aver affidato ad un sistema informatico un lavoro che richiede alta precisione e bassa latenza, requisiti non completamente soddisfatti dall'operatore umano.
+
+Il sistema centrale sarà connesso ai vari terminali attraverso una rete intranet. Per il corretto funzionamento, essi avranno disponibile una JVM per il sistema operativo UNIX-like che possiedono.
+
+Il sistema gestione ZTL verrà rilasciato sotto licenza proprietaria.
+
+\subsection{Riepilogo caratteristiche del sistema}
+L'applicazione verrà eseguita su un sistema operativo UNIX-like (Linux, MacOS, Windows con un opportuno emulatore terminale). L'interfaccia sarà a riga di comando per rendere le operazioni più efficienti.
+
+\section{Regole di business}
+Durante la fase di ideazione sono state individuate le seguenti regole di business
+\begin{itemize}
+    \item \textbf{R1:} per accedere alla zona 
+    a traffico limitato (ZTL) occore dispositivo 
+    telepass, il quale avrà associato un codice 
+    identificativo (ID)
+    \item \textbf{R2:} l'uscita può avvenire da
+    qualsiasi valico (gli utenti carico-scarico
+    possono uscire dai varchi abilitati ai soli
+    residenti)
+\end{itemize}
+
+\section{Specifiche supplementari}
+Le specifiche \emph{URPS+} individuate in fase di 
+ideazione sono le seguenti
+\begin{itemize}
+    \item Il sistema deve mostrare un log semplice 
+    in modo da permettere all'impiegato una veloce 
+    analisi circa il traffico \emph{(U)}
+    \item Il sistema deve utilizzare una connessione
+    intranet (per collegare terminali e sistema centrale)
+    veloce e con bassa latenza \emph{(R)}
+\end{itemize}
+
+\section{Glossario}
+\begin{itemize}
+    \item \textbf{Utente:} veicolo, dotato di telepass o meno,
+    che effettua il transito
+    \item \textbf{Terminale:} dispositivo elettronico posto al 
+    valico di accesso/uscita della zona a traffico limitato
+    \item \textbf{ZTL:} abbreviazione di zona a traffico limitato
+    \item \textbf{Telepass:} dispositivo elettronico utente per 
+    il riconoscimento al valico d'ingresso
+\end{itemize}
+
+\end{document}
